@@ -1,0 +1,65 @@
+# Local High-Availability topology (Requirement 6):
+#   nginx load balancer  ->  two pkiserver replicas (r1, r2)
+# All replicas share the CA hierarchy + status store via a named volume, mirroring
+# the cloud topology where replicas share an HSM + database.
+#
+#   make compose-up      # build + start (LB on :8080)
+#   make compose-down    # tear down
+#
+# The 'init' service builds the CA hierarchy once into the shared volume before
+# the replicas start.
+
+name: hybrid-pki-test-env
+
+services:
+  init:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    entrypoint: ["/app/pkitool", "build", "--config", "/app/config/hierarchy.yaml", "--out", "/data", "--hsm", "/data/hsm"]
+    volumes:
+      - pki-data:/data
+
+  pki-r1:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["--addr", ":8080", "--replica", "r1", "--out", "/data", "--hsm", "/data/hsm", "--store", "/data/status.json", "--crl", "/data/issuing-ca-1.crl"]
+    environment:
+      REPLICA_ID: r1
+    volumes:
+      - pki-data:/data
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/app/pkiserver", "--help"]  # distroless has no curl; liveness via process
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  pki-r2:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["--addr", ":8080", "--replica", "r2", "--out", "/data", "--hsm", "/data/hsm", "--store", "/data/status.json", "--crl", "/data/issuing-ca-1.crl"]
+    environment:
+      REPLICA_ID: r2
+    volumes:
+      - pki-data:/data
+    depends_on:
+      init:
+        condition: service_completed_successfully
+
+  lb:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - pki-r1
+      - pki-r2
+
+volumes:
+  pki-data:

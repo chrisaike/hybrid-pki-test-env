@@ -1,0 +1,50 @@
+# Single source of truth for the CA hierarchy.
+# Edit this file to model your production hierarchy, then re-issue with `make issue`.
+#
+# NOTE: all test trust anchors are deliberately labelled "TEST - DO NOT TRUST"
+# so they can never be confused with production trust anchors.
+
+organization: "Hybrid PKI Test Environment"
+
+root:
+  name: "TEST Root CA - DO NOT TRUST"
+  key: { type: ecdsa, curve: P-384 }   # type: rsa|ecdsa ; rsa uses `bits`, ecdsa uses `curve`
+  validity_days: 7300                   # ~20 years
+  slot: root                            # simulated-HSM slot label (offline)
+
+intermediates:
+  - name: "TEST Intermediate CA 1 - DO NOT TRUST"
+    key: { type: ecdsa, curve: P-384 }
+    validity_days: 3650                 # ~10 years
+    path_len: 1
+    slot: intermediate
+
+issuing:
+  - name: "TEST Issuing CA 1 - DO NOT TRUST"
+    parent: "TEST Intermediate CA 1 - DO NOT TRUST"
+    key: { type: rsa, bits: 3072 }
+    validity_days: 1825                 # ~5 years
+    slot: issuing
+    aia: "http://pki.test.local:8080/ocsp"
+    cdp: "http://pki.test.local:8080/crl/issuing-ca-1.crl"
+
+# Certificate profiles model AD certificate templates (template -> GPO mapping).
+# Requests that do not match an allowed profile are denied.
+profiles:
+  tls-server:
+    eku: [serverAuth]
+    key_usage: [digitalSignature, keyEncipherment]
+    validity_days: 90
+  tls-client:
+    eku: [clientAuth]
+    key_usage: [digitalSignature]
+    validity_days: 90
+  device-autoenroll:                    # represents AD machine auto-enrollment
+    eku: [clientAuth]
+    key_usage: [digitalSignature]
+    validity_days: 365
+
+# Cryptography agility: classical now, PQC integration point documented in docs/PQC.md
+crypto:
+  default_hash: sha384
+  pqc_ready: false                      # flip + set provider when certifying a PQC change

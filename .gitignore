@@ -1,0 +1,36 @@
+# Build artifacts
+/bin/
+/out/
+
+# Runtime / generated key material — NEVER commit
+*.key
+*.key.json
+*.pem
+!config/**/*.pem
+*.crl
+status.json
+snapshot*.json
+certification-report.json
+
+# Simulated HSM token store
+**/hsm/
+softhsm/
+
+# Secrets
+.env
+.env.*
+*.pin
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+override.tf
+override.tf.json
+
+# OS / editor
+.DS_Store
+*.swp

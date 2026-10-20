@@ -15,6 +15,9 @@ permissions:
 jobs:
   build-test-certify:
     runs-on: ubuntu-latest
+    env:
+      GO111MODULE: 'on'      # force module mode — the repo is its own module
+      GOFLAGS: '-mod=mod'
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +29,9 @@ jobs:
       - name: Go environment
         run: |
           go version
-          go env GOFLAGS GOPROXY GOMOD
+          echo "PWD=$(pwd)"
+          ls -la go.mod
+          go env GO111MODULE GOFLAGS GOPROXY GOMOD GOPATH
 
       - name: Download modules
         run: go mod download

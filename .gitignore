@@ -12,8 +12,10 @@ status.json
 snapshot*.json
 certification-report.json
 
-# Simulated HSM token store
-**/hsm/
+# Simulated HSM token store (runtime only — NOT the internal/hsm source package).
+# Scope to the build output dir so it never matches source directories.
+/out/hsm/
+**/out/hsm/
 softhsm/
 
 # Secrets

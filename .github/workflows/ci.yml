@@ -1,0 +1,49 @@
+name: ci
+
+# Build, test, and run the PKI certification harness. The certification report
+# gates the pipeline: if any trust-path check fails, the job fails.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test-certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test (default build)
+        run: go test ./...
+
+      - name: Test (pqc-tagged build compiles)
+        run: go build -tags pqc ./...
+
+      - name: Build binaries
+        run: make build
+
+      - name: Certify (emits JSON + JUnit; non-zero exit fails the job)
+        run: make certify
+
+      - name: Upload certification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-report
+          path: |
+            out/certification-report.json
+            out/certification-report.xml
+
+      - name: Publish JUnit test report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: out/certification-report.xml

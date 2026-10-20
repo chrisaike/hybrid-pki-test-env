@@ -43,8 +43,10 @@ down: ## Tear down local artifacts (stops nothing persistent; HSM keys kept unle
 
 ## ---------- Certification ----------
 
-certify: build ## Run the certification harness and emit a machine-readable report
-	./bin/certify --config $(CONFIG) --report $(OUT)/certification-report.json
+certify: build ## Run the certification harness and emit JSON + JUnit reports
+	./bin/certify --config $(CONFIG) \
+	  --report $(OUT)/certification-report.json \
+	  --junit  $(OUT)/certification-report.xml
 
 ## ---------- Quality ----------
 

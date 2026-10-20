@@ -3,6 +3,7 @@ package revocation
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/x509"
@@ -27,6 +28,7 @@ var (
 	oidOCSPBasic      = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1, 1}
 	oidSigSHA256RSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
 	oidSigSHA256ECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 2}
+	oidSigEd25519     = asn1.ObjectIdentifier{1, 3, 101, 112}
 )
 
 // OCSPResponder answers OCSP requests from the status store, signing responses
@@ -169,9 +171,19 @@ func (r *OCSPResponder) BuildResponse(serial *big.Int) ([]byte, error) {
 	}
 
 	sigAlg, hashFn := r.sigAlg()
-	h := hashFn.New()
-	h.Write(tbs)
-	sig, err := r.issuerKey.Sign(rand.Reader, h.Sum(nil), hashFn)
+	var (
+		digest []byte
+		opts   crypto.SignerOpts = hashFn
+	)
+	if hashFn == crypto.Hash(0) {
+		// Ed25519 signs the full message (no pre-hash).
+		digest = tbs
+	} else {
+		h := hashFn.New()
+		h.Write(tbs)
+		digest = h.Sum(nil)
+	}
+	sig, err := r.issuerKey.Sign(rand.Reader, digest, opts)
 	if err != nil {
 		return nil, fmt.Errorf("ocsp: sign: %w", err)
 	}
@@ -213,6 +225,8 @@ func (r *OCSPResponder) sigAlg() (asn1.ObjectIdentifier, crypto.Hash) {
 	switch r.issuerKey.Public().(type) {
 	case *ecdsa.PublicKey:
 		return oidSigSHA256ECDSA, crypto.SHA256
+	case ed25519.PublicKey:
+		return oidSigEd25519, crypto.Hash(0)
 	default:
 		return oidSigSHA256RSA, crypto.SHA256
 	}

@@ -5,6 +5,7 @@ package revocation
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -87,6 +88,8 @@ func crlSigAlg(key crypto.Signer) x509.SignatureAlgorithm {
 		return x509.ECDSAWithSHA384
 	case *rsa.PublicKey:
 		return x509.SHA256WithRSA
+	case ed25519.PublicKey:
+		return x509.PureEd25519
 	default:
 		return x509.UnknownSignatureAlgorithm // let x509 pick a default
 	}

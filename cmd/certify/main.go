@@ -19,17 +19,27 @@ import (
 
 func main() {
 	cfgPath := flag.String("config", "config/hierarchy.yaml", "hierarchy.yaml")
-	reportPath := flag.String("report", "out/certification-report.json", "report output path")
+	reportPath := flag.String("report", "out/certification-report.json", "JSON report output path")
+	junitPath := flag.String("junit", "", "JUnit XML report output path (optional, for CI)")
 	flag.Parse()
 
 	start := time.Now()
 	report := certify.Run(*cfgPath)
 	report.DurationMS = time.Since(start).Milliseconds()
 
-	// write machine-readable report
+	// write machine-readable JSON report
 	if err := os.MkdirAll(dir(*reportPath), 0o755); err == nil {
 		b, _ := json.MarshalIndent(report, "", "  ")
 		_ = os.WriteFile(*reportPath, b, 0o644)
+	}
+
+	// write JUnit XML report for CI systems (Requirement 9.6)
+	if *junitPath != "" {
+		if err := os.MkdirAll(dir(*junitPath), 0o755); err == nil {
+			if xmlBytes, err := report.JUnitXML(); err == nil {
+				_ = os.WriteFile(*junitPath, xmlBytes, 0o644)
+			}
+		}
 	}
 
 	// human summary
@@ -53,6 +63,9 @@ func main() {
 	fmt.Printf(" Overall: %s  (%.0f%% pass, %dms)\n",
 		verdict(report), report.PassRate*100, report.DurationMS)
 	fmt.Printf(" Report: %s\n", *reportPath)
+	if *junitPath != "" {
+		fmt.Printf(" JUnit:  %s\n", *junitPath)
+	}
 	fmt.Println("==================================================")
 
 	if report.Failed > 0 {

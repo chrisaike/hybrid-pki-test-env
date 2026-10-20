@@ -44,11 +44,52 @@ keys), the same seam applies: the token returns a composite signer and the
 issuing templates carry both algorithms. Model it in `hierarchy.yaml`, issue, and
 certify — no change to the control flow.
 
-## Status
+## The provider registry (implemented)
 
-- Implemented: RSA + ECDSA across all CA tiers, verified by the certification
-  harness (the current hierarchy mixes ECDSA root/intermediate with an RSA
-  issuing CA, proving the mixed-algorithm path).
-- Documented + ready: the provider-selection seam above. Wiring a concrete PQC
-  provider is the remaining step and is intentionally isolated to the `hsm`
-  backend.
+`internal/hsm/provider.go` holds a `KeyProvider` registry — the single
+crypto-agility seam. Built-in providers:
+
+| Key type | Algorithm family | Status |
+|----------|------------------|--------|
+| `rsa` | RSA (2048/3072/4096) | built in |
+| `ecdsa` | ECDSA (P-256/384/521) | built in |
+| `ed25519` | EdDSA (Ed25519) | built in |
+| `mldsa44` / `mldsa65` / `mldsa87` | ML-DSA / Dilithium (FIPS 204) | registered under `-tags pqc`, binding pending |
+
+Adding an algorithm is one `RegisterProvider(keyType, fn)` call; the CA
+hierarchy, issuance, OCSP, and CRL code are untouched because they depend only on
+`crypto.Signer`.
+
+## Proof the seam works (automated)
+
+`internal/certify/agility_test.go` builds an **entirely Ed25519 hierarchy** — a
+third algorithm family added purely by provider registration — and certifies it
+end-to-end (chain-to-root, issue, OCSP good→revoked, CRL contents). This
+demonstrates the exact path an ML-DSA change will take: register the provider,
+set `key.type`, re-run `make certify`.
+
+## ML-DSA (PQC) wiring
+
+`internal/hsm/provider_pqc.go` (build tag `pqc`) already registers the three
+ML-DSA parameter sets at the seam. The one remaining step is to link a concrete
+signer in `newMLDSASigner` — either:
+
+- an **oqs-provider** cgo binding returning a `crypto.Signer`, plus the FIPS-204
+  X.509 marshalling (SPKI + signature OIDs), or
+- a **pure-Go** FIPS-204 implementation.
+
+Build and certify a PQC hierarchy with:
+
+```bash
+go build -tags pqc ./...
+# set key.type: mldsa65 in config/hierarchy.yaml
+make certify
+```
+
+## Status summary
+
+- **Implemented + verified**: RSA, ECDSA, and Ed25519 across all CA tiers. The
+  default hierarchy mixes ECDSA root/intermediate with an RSA issuing CA, and the
+  agility test runs a full Ed25519 hierarchy — both certified by the harness.
+- **Wired, binding pending**: ML-DSA (`-tags pqc`) registration is complete; only
+  the concrete signer in `newMLDSASigner` remains, isolated to the `hsm` backend.

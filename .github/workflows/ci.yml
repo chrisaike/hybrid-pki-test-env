@@ -8,6 +8,10 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  checks: write      # allow the JUnit reporter to publish check runs
+
 jobs:
   build-test-certify:
     runs-on: ubuntu-latest
@@ -16,7 +20,16 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.25.1'
+          check-latest: true
+
+      - name: Go environment
+        run: |
+          go version
+          go env GOFLAGS GOPROXY GOMOD
+
+      - name: Download modules
+        run: go mod download
 
       - name: Vet
         run: go vet ./...
@@ -24,7 +37,7 @@ jobs:
       - name: Test (default build)
         run: go test ./...
 
-      - name: Test (pqc-tagged build compiles)
+      - name: Build (pqc-tagged) compiles
         run: go build -tags pqc ./...
 
       - name: Build binaries
@@ -44,6 +57,8 @@ jobs:
 
       - name: Publish JUnit test report
         if: always()
+        continue-on-error: true   # a restricted token must not fail the build
         uses: mikepenz/action-junit-report@v5
         with:
           report_paths: out/certification-report.xml
+          fail_on_failure: false

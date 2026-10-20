@@ -17,7 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GO111MODULE: 'on'      # force module mode — the repo is its own module
-      GOFLAGS: '-mod=mod'
+      # Do NOT set -mod=mod: with a private repo it makes `go vet` try to fetch
+      # the module's own path over the network (auth fails). Default readonly
+      # resolves local packages without any network. GOPRIVATE ensures Go never
+      # attempts to fetch this private module path.
+      GOPRIVATE: 'github.com/chrisaike/*'
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +35,7 @@ jobs:
           go version
           echo "PWD=$(pwd)"
           ls -la go.mod
-          go env GO111MODULE GOFLAGS GOPROXY GOMOD GOPATH
+          go env GO111MODULE GOFLAGS GOPROXY GOPRIVATE GOMOD GOPATH
 
       - name: Download modules
         run: go mod download

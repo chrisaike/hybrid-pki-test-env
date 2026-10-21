@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hybrid PKI Test &amp; Certification Environment — Dashboard</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #121a30; --panel2: #0f1628; --line: #223150;
+    --text: #e6edf7; --muted: #8aa0c2; --accent: #4da3ff; --accent2: #7c5cff;
+    --ok: #30d158; --warn: #ffb020; --bad: #ff5c5c; --chip: #1b2742;
+    --root: #7c5cff; --inter: #4da3ff; --issue: #30d158; --leaf: #ffb020;
+    --radius: 14px; --shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  a { color:var(--accent); }
+  .wrap { max-width:1180px; margin:0 auto; padding:28px 20px 80px; }
+  header.hero {
+    background:linear-gradient(135deg,#141d38 0%,#0d1428 60%); border:1px solid var(--line);
+    border-radius:var(--radius); padding:28px 30px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+  header.hero::after { content:""; position:absolute; inset:0;
+    background:radial-gradient(600px 200px at 85% -20%, rgba(124,92,255,.25), transparent 70%); pointer-events:none; }
+  .hero h1 { margin:0 0 6px; font-size:28px; letter-spacing:.2px; }
+  .hero p { margin:0; color:var(--muted); max-width:760px; line-height:1.55; }
+  .badges { margin-top:18px; display:flex; flex-wrap:wrap; gap:10px; }
+  .badge { background:var(--chip); border:1px solid var(--line); border-radius:999px;
+    padding:6px 13px; font-size:12.5px; color:var(--muted); display:inline-flex; gap:7px; align-items:center; }
+  .badge b { color:var(--text); }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot.ok { background:var(--ok); box-shadow:0 0 8px var(--ok); }
+
+  nav.tabs { position:sticky; top:0; z-index:20; margin:22px 0 24px; display:flex; gap:6px;
+    flex-wrap:wrap; background:rgba(11,16,32,.85); backdrop-filter:blur(8px); padding:10px 0; }
+  nav.tabs button { background:var(--panel); color:var(--muted); border:1px solid var(--line);
+    padding:9px 15px; border-radius:10px; font-size:13.5px; cursor:pointer; transition:.15s; }
+  nav.tabs button:hover { color:var(--text); border-color:#2f4878; }
+  nav.tabs button.active { background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff; border-color:transparent; font-weight:600; }
+
+  section.tab { display:none; animation:fade .3s ease; }
+  section.tab.active { display:block; }
+  @keyframes fade { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+  h2.sec { font-size:19px; margin:4px 0 4px; }
+  p.lead { color:var(--muted); margin:0 0 20px; line-height:1.55; }
+
+  .grid { display:grid; gap:16px; }
+  .g2 { grid-template-columns:repeat(2,1fr); }
+  .g3 { grid-template-columns:repeat(3,1fr); }
+  .g4 { grid-template-columns:repeat(4,1fr); }
+  @media(max-width:860px){ .g2,.g3,.g4{ grid-template-columns:1fr; } }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px; box-shadow:var(--shadow); }
+  .card h3 { margin:0 0 8px; font-size:15px; }
+  .card p { margin:0; color:var(--muted); font-size:13.5px; line-height:1.5; }
+  .kpi { text-align:center; }
+  .kpi .n { font-size:30px; font-weight:700; }
+  .kpi .l { color:var(--muted); font-size:12.5px; margin-top:4px; }
+
+  /* Timeline / steps */
+  .steps { position:relative; margin-left:8px; padding-left:28px; }
+  .steps::before { content:""; position:absolute; left:8px; top:6px; bottom:6px; width:2px;
+    background:linear-gradient(var(--accent),var(--accent2)); }
+  .step { position:relative; margin-bottom:16px; }
+  .step .node { position:absolute; left:-27px; top:3px; width:16px; height:16px; border-radius:50%;
+    background:var(--accent); border:3px solid var(--bg); box-shadow:0 0 0 2px var(--accent); }
+  .step h4 { margin:0 0 5px; font-size:14.5px; }
+  .step .meta { color:var(--muted); font-size:12px; margin-bottom:6px; }
+  .step .body { background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+    color:var(--muted); font-size:13px; line-height:1.55; }
+  .tag { display:inline-block; background:var(--chip); border:1px solid var(--line); border-radius:6px;
+    padding:1px 8px; font-size:11px; color:var(--accent); margin-right:6px; }
+
+  /* Hierarchy diagram */
+  .tree { display:flex; flex-direction:column; align-items:center; gap:0; padding:10px 0 6px; }
+  .tier { display:flex; justify-content:center; gap:18px; flex-wrap:wrap; }
+  .connector { width:2px; height:26px; background:var(--line); }
+  .node-card { width:300px; background:var(--panel2); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:12px; padding:13px 15px; }
+  .node-card.root { border-left-color:var(--root); }
+  .node-card.inter { border-left-color:var(--inter); }
+  .node-card.issue { border-left-color:var(--issue); }
+  .node-card .cn { font-weight:600; font-size:13.5px; }
+  .node-card .row { display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); margin-top:7px; }
+  .node-card .row b { color:var(--text); font-weight:500; }
+  .pill { font-size:10.5px; padding:1px 7px; border-radius:999px; background:var(--chip); color:var(--muted); }
+  .pill.offline { color:var(--warn); border:1px solid rgba(255,176,32,.4); }
+  .pill.online { color:var(--ok); border:1px solid rgba(48,209,88,.4); }
+
+  /* checks table */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+  td code { color:var(--accent); }
+  .status { font-weight:600; }
+  .status.pass { color:var(--ok); }
+  .status.fail { color:var(--bad); }
+  .reqchip { background:var(--chip); border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:11px; color:var(--accent2); }
+
+  /* flow (lifecycle) */
+  .flow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .flow .fnode { background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px 14px;
+    font-size:12.5px; text-align:center; min-width:96px; }
+  .flow .arrow { color:var(--accent); font-size:18px; }
+  .flow .fnode.good { border-color:rgba(48,209,88,.5); }
+  .flow .fnode.bad { border-color:rgba(255,92,92,.5); }
+
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin:6px 0 16px; color:var(--muted); font-size:12.5px; }
+  .legend span { display:inline-flex; align-items:center; gap:7px; }
+  .sw { width:12px; height:12px; border-radius:3px; display:inline-block; }
+
+  .cloudgrid { display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:12.5px; }
+  .cloudgrid div { padding:10px 12px; border-bottom:1px solid var(--line); border-right:1px solid var(--line); }
+  .cloudgrid .hd { background:var(--panel2); color:var(--muted); font-weight:600; }
+  .cloudgrid .impl { color:var(--ok); }
+  .cloudgrid .stub { color:var(--warn); }
+  @media(max-width:860px){ .cloudgrid{ grid-template-columns:1fr; } }
+
+  footer { margin-top:40px; color:var(--muted); font-size:12.5px; text-align:center; line-height:1.7; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .note { font-size:12px; color:var(--muted); margin-top:10px; }
+  .barwrap { background:var(--chip); border-radius:999px; height:10px; overflow:hidden; margin-top:10px; }
+  .bar { height:100%; background:linear-gradient(90deg,var(--ok),#7be38f); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>Hybrid PKI Test &amp; Certification Environment</h1>
+    <p>A production-representative, multi-cloud-capable PKI test bed delivered as Infrastructure as Code —
+       built to de-risk high-impact root, crypto, cloud, workload, and trust changes before they reach
+       production. This dashboard visualizes what was built and the step-by-step process behind it.</p>
+    <div class="badges" id="heroBadges"></div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="process">Build Process</button>
+    <button data-tab="hierarchy">CA Hierarchy</button>
+    <button data-tab="components">Components</button>
+    <button data-tab="lifecycle">Lifecycle &amp; Revocation</button>
+    <button data-tab="certify">Certification</button>
+    <button data-tab="cloud">Multi-Cloud</button>
+    <button data-tab="crypto">Crypto Agility</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <section class="tab active" id="overview">
+    <h2 class="sec">At a glance</h2>
+    <p class="lead">Live figures below come from the actual certification harness run embedded into this page.</p>
+    <div class="grid g4" id="kpis"></div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card">
+        <h3>What "hybrid" means here</h3>
+        <p><span class="tag">Deployment</span> on-prem-style services (CA, AD/GPO, SoftHSM) + cloud<br/>
+           <span class="tag">Cloud</span> multi-cloud (AWS implemented; Azure/GCP via same contracts)<br/>
+           <span class="tag">Crypto</span> classical (RSA/ECDSA/Ed25519) with a documented PQC path</p>
+      </div>
+      <div class="card">
+        <h3>Why it's Priority 1</h3>
+        <p>Decreases risk of failed deployments and cuts the cost of an on-prem test environment. Prevents
+           Production from becoming the first realistic integration test for high-risk changes, and provides a
+           reusable certification service for updates, migrations, integrations, OEM products, and rollback plans.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Critical trust paths covered</h3>
+      <div class="grid g3" style="margin-top:10px;" id="trustPaths"></div>
+    </div>
+  </section>
+
+  <!-- BUILD PROCESS -->
+  <section class="tab" id="process">
+    <h2 class="sec">Step-by-step build process</h2>
+    <p class="lead">The environment was built from a Kiro Spec (requirements → design → tasks), then implemented
+       and verified incrementally. Each step below maps to real tasks and files in the repo.</p>
+    <div class="steps" id="stepsList"></div>
+  </section>
+
+  <!-- HIERARCHY -->
+  <section class="tab" id="hierarchy">
+    <h2 class="sec">CA hierarchy</h2>
+    <p class="lead">Built from <code class="mono">config/hierarchy.yaml</code> via a PKCS#11-shaped signer.
+       The default hierarchy deliberately mixes algorithms (ECDSA root/intermediate + RSA issuing) to prove the
+       crypto-agility path. Data below is read from the actual generated certificates.</p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--root)"></i> Root (offline)</span>
+      <span><i class="sw" style="background:var(--inter)"></i> Intermediate</span>
+      <span><i class="sw" style="background:var(--issue)"></i> Issuing (online)</span>
+      <span><i class="sw" style="background:var(--leaf)"></i> Leaf / end-entity</span>
+    </div>
+    <div class="tree" id="tree"></div>
+    <p class="note">Trust anchor clients import: <code class="mono">out/ca-bundle.pem</code> (labelled “TEST — DO NOT TRUST”).
+       The Root key stays in its own offline slot and only signs intermediates + the Root CRL.</p>
+  </section>
+
+  <!-- COMPONENTS -->
+  <section class="tab" id="components">
+    <h2 class="sec">Component map</h2>
+    <p class="lead">Everything depends on one narrow seam — a <code class="mono">crypto.Signer</code> from an
+       <code class="mono">hsm.Token</code> — which makes the system both simulatable and crypto-agile.</p>
+    <div class="grid g3" id="componentCards"></div>
+  </section>
+
+  <!-- LIFECYCLE -->
+  <section class="tab" id="lifecycle">
+    <h2 class="sec">Certificate lifecycle &amp; revocation</h2>
+    <p class="lead">Issuance, renewal, and revocation all flow through one service layer; OCSP and CRL read the
+       same status store. This mirrors the production enroll/renew/revoke path.</p>
+    <div class="card">
+      <h3>Enrollment → validation</h3>
+      <div class="flow" style="margin-top:12px;">
+        <div class="fnode">Client / Venafi API</div><div class="arrow">→</div>
+        <div class="fnode">Profile check</div><div class="arrow">→</div>
+        <div class="fnode">HSM sign</div><div class="arrow">→</div>
+        <div class="fnode">AIA/CDP stamp</div><div class="arrow">→</div>
+        <div class="fnode good">Cert + chain</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Revocation → OCSP / CRL</h3>
+      <div class="flow" style="margin-top:12px;">
+        <div class="fnode">Revoke request</div><div class="arrow">→</div>
+        <div class="fnode">Status store</div><div class="arrow">→</div>
+        <div class="fnode">CRL republish</div><div class="arrow">→</div>
+        <div class="fnode bad">OCSP: revoked</div>
+      </div>
+      <p class="note">Verified live: OCSP returns <b>good</b> for a valid cert and <b>revoked</b> after revocation;
+         the CRL contains the revoked serial.</p>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Endpoints exposed</h3>
+      <p class="mono" style="color:var(--muted); line-height:1.9;">
+        POST /v1/certificates/request · /{id}/renew · /{id}/revoke · GET /{id}<br/>
+        POST /.well-known/est/simpleenroll?profile=… &nbsp;(AD auto-enroll)<br/>
+        GET&nbsp; /ocsp &nbsp;·&nbsp; /crl/issuing-ca-1.crl &nbsp;·&nbsp; /healthz
+      </p>
+    </div>
+  </section>
+
+  <!-- CERTIFY -->
+  <section class="tab" id="certify">
+    <h2 class="sec">Certification results</h2>
+    <p class="lead">The harness builds an ephemeral environment and runs a battery of checks mapped to the spec's
+       requirements, emitting a machine-readable report (JSON + JUnit) that gates CI/CD.</p>
+    <div class="card">
+      <h3 id="verdictLine"></h3>
+      <div class="barwrap"><div class="bar" id="passBar"></div></div>
+      <table style="margin-top:14px;">
+        <thead><tr><th>Check</th><th>Requirement</th><th>Detail</th><th>Status</th></tr></thead>
+        <tbody id="checksBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CLOUD -->
+  <section class="tab" id="cloud">
+    <h2 class="sec">Multi-cloud design</h2>
+    <p class="lead">Each Terraform module exposes a cloud-agnostic contract (identical variables/outputs); the
+       body is cloud-specific. Switching cloud = changing one <code class="mono">source =</code> line.</p>
+    <div class="cloudgrid" id="cloudGrid"></div>
+    <p class="note"><span class="impl" style="color:var(--ok)">AWS implemented</span> (ECS Fargate + ALB, ≥2 replicas);
+       <span class="stub" style="color:var(--warn)">Azure/GCP are contract-complete stubs</span> with a documented resource map.</p>
+  </section>
+
+  <!-- CRYPTO -->
+  <section class="tab" id="crypto">
+    <h2 class="sec">Crypto agility &amp; PQC readiness</h2>
+    <p class="lead">All key generation and signing flow through a single provider registry — the crypto-agility
+       seam. Adding an algorithm (including post-quantum) is one registration; the CA/issuance/OCSP/CRL code is
+       unchanged.</p>
+    <div class="grid g4" id="algoCards"></div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Proven end-to-end</h3>
+      <p>An entirely Ed25519 hierarchy — a third algorithm family added purely by provider registration — builds,
+         issues, validates to root, and runs OCSP + CRL in the automated test suite. That is the exact path a
+         future ML-DSA (FIPS 204) change follows: register the provider, set <code class="mono">key.type</code>,
+         re-run <code class="mono">make certify</code>.</p>
+    </div>
+  </section>
+
+  <footer>
+    Generated from live data produced by the certification harness ·
+    <a href="https://github.com/chrisaike/hybrid-pki-test-env">github.com/chrisaike/hybrid-pki-test-env</a><br/>
+    Self-contained static page — no dependencies. Open locally or publish via GitHub Pages.
+  </footer>
+</div>
+
+<script id="data" type="application/json">
+{
+  "report": {"checks": [{"name": "chain builds & validates to Root", "requirement": "9.1", "pass": true, "detail": "leaf -> issuing -> intermediate -> root (3-tier)"}, {"name": "lifecycle: issue", "requirement": "9.2", "pass": true, "detail": "serial 101415560270790577834140050134817478272"}, {"name": "lifecycle: renew", "requirement": "9.2", "pass": true, "detail": "old=8d7106b3 new=b50fb2d8"}, {"name": "lifecycle: revoke", "requirement": "9.2", "pass": true, "detail": ""}, {"name": "OCSP good (valid cert)", "requirement": "9.3", "pass": true, "detail": "status=good"}, {"name": "OCSP revoked (after revoke)", "requirement": "9.3", "pass": true, "detail": "status=revoked"}, {"name": "CRL contains revoked serial", "requirement": "9.3", "pass": true, "detail": "2 entries in CRL"}, {"name": "HA: service survives one replica loss", "requirement": "9.4", "pass": true, "detail": "replica B served request after A down"}, {"name": "rollback: restore prior state", "requirement": "9.5", "pass": true, "detail": "post-rollback state matches pre-change snapshot"}], "passed": 9, "failed": 0, "pass_rate": 1, "duration_ms": 132, "certified": true},
+  "hierarchy": [
+    {"cn":"TEST Root CA - DO NOT TRUST","tier":"root","keyAlg":"ECDSA","sigAlg":"ECDSA-SHA384","notAfter":"2046-10-16","posture":"offline"},
+    {"cn":"TEST Intermediate CA 1 - DO NOT TRUST","tier":"inter","keyAlg":"ECDSA","sigAlg":"ECDSA-SHA384","notAfter":"2036-10-18","posture":"offline"},
+    {"cn":"TEST Issuing CA 1 - DO NOT TRUST","tier":"issue","keyAlg":"RSA","sigAlg":"ECDSA-SHA384","notAfter":"2031-10-20","posture":"online","aia":"http://pki.test.local:8080/ocsp","cdp":"http://pki.test.local:8080/crl/issuing-ca-1.crl"}
+  ],
+  "steps": [
+    {"n":"1","title":"Scaffold repo, config &amp; lifecycle tooling","req":"7.6, 8.1, 8.3","files":"Makefile · config/hierarchy.yaml · .gitignore","body":"Established the repo layout and a single source of truth for the hierarchy (key types, validities, path lengths, AIA/CDP, profiles). Makefile drives up/down/certify + Terraform lifecycle."},
+    {"n":"2","title":"Simulated HSM (SoftHSM / PKCS#11)","req":"2.1–2.4","files":"internal/hsm/","body":"PKCS#11-shaped token with per-slot keys + PIN login, mirroring the production HSM call path. Fails closed if a slot is used without login — no silent file-key fallback."},
+    {"n":"3","title":"CA core — hierarchy + signer","req":"1.x, 10.1","files":"internal/ca/","body":"Generates offline Root → Intermediate → Issuing from config, issues leaf certs with profile enforcement and AIA/CDP, and re-issues idempotently with no manual key handling."},
+    {"n":"4","title":"Revocation — OCSP + CRL","req":"4.x","files":"internal/revocation/ · internal/store/","body":"Status store backs a hand-rolled RFC 6960 OCSP responder (good/revoked) and a CRL publisher signed by the issuing CA. Signature algorithm follows the signing key, not the issuer cert."},
+    {"n":"5","title":"Mock Venafi REST API","req":"3.x","files":"internal/httpapi/","body":"Enroll / renew / revoke / status endpoints shaped like the production Venafi operations, delegating to the CA core + status store."},
+    {"n":"6","title":"Enrollment surface (AD/GPO)","req":"5.x","files":"internal/httpapi/ (EST)","body":"EST simpleenroll endpoint with template-equivalent profiles (key usage, EKU, validity) and an allow-list; non-matching requests are denied (403)."},
+    {"n":"7","title":"Load balancing + HA","req":"6.x","files":"compose/ (nginx + 2 replicas)","body":"Issuing/OCSP/enrollment run with ≥2 replicas behind a load balancer with health checks; the service survives losing one replica."},
+    {"n":"8","title":"Local deployment (Docker Compose)","req":"7.6, 8.x","files":"Dockerfile · compose/","body":"Zero-cost full-parity local topology: LB → replicas sharing the CA + status store, mirroring the cloud shape."},
+    {"n":"9","title":"Multi-cloud IaC (Terraform)","req":"7.x, 8.2","files":"infra/modules · infra/envs","body":"Cloud-agnostic module contracts with an implemented AWS build (ECS Fargate + ALB), Azure/GCP stubs, and scheduled teardown for cost control."},
+    {"n":"10","title":"Certification harness","req":"9.x","files":"internal/certify · cmd/certify","body":"Runs chain/lifecycle/OCSP-CRL/HA/rollback checks and emits JSON + JUnit reports; non-zero exit gates CI/CD."},
+    {"n":"11","title":"Hybrid / PQC readiness","req":"10.x","files":"internal/hsm/provider*.go","body":"Provider registry seam (RSA/ECDSA/Ed25519 built in; ML-DSA under -tags pqc). Adding an algorithm is one registration — proven by a full Ed25519 hierarchy test."},
+    {"n":"12","title":"Docs, CI &amp; GitHub","req":"NFR + CI","files":".github/workflows/ci.yml · docs/","body":"Architecture, multi-cloud, PQC, and runbook docs; a GitHub Actions pipeline runs vet/test/pqc-build/certify and publishes the JUnit report. CI is green on main."}
+  ],
+  "components": [
+    {"name":"ca-core","role":"CA hierarchy + issuing signer","detail":"Root→Intermediate→Issuing; profile-enforced issuance; AIA/CDP stamping.","color":"var(--issue)"},
+    {"name":"hsm-sim","role":"Simulated HSM (PKCS#11)","detail":"Per-slot keys + PIN login; fail-closed. Swaps to CloudHSM/Managed HSM in prod.","color":"var(--root)"},
+    {"name":"venafi-sim","role":"Mock Venafi REST API","detail":"enroll / renew / revoke / status mirroring production operations.","color":"var(--accent)"},
+    {"name":"revocation","role":"OCSP responder + CRL publisher","detail":"RFC 6960 OCSP + signed CRLs backed by the status store.","color":"var(--leaf)"},
+    {"name":"enrollment","role":"EST auto-enroll surface","detail":"AD-template-equivalent profiles with allow-list enforcement.","color":"var(--accent2)"},
+    {"name":"store","role":"Lifecycle status store","detail":"issued/renewed/revoked state; snapshot + restore for rollback tests.","color":"var(--inter)"},
+    {"name":"certify","role":"Certification harness","detail":"chain / lifecycle / OCSP-CRL / HA / rollback → JSON + JUnit report.","color":"var(--ok)"},
+    {"name":"infra","role":"Multi-cloud Terraform","detail":"Contract-identical modules: aws (impl), azure/gcp (stubs) + Compose.","color":"var(--accent)"},
+    {"name":"cmd","role":"CLI entry points","detail":"pkitool (offline control) · pkiserver (online) · certify (harness).","color":"var(--muted)"}
+  ],
+  "cloud": [
+    ["Logical","AWS (implemented)","Azure (stub)","GCP (stub)"],
+    ["Compute","ECS Fargate","Container Apps","Cloud Run"],
+    ["Load balancer","ALB","Azure LB / App GW","Cloud Load Balancing"],
+    ["Secrets","Secrets Manager","Key Vault","Secret Manager"],
+    ["Object store","S3 + CloudFront","Blob + CDN","GCS + Cloud CDN"],
+    ["Status store","RDS / DynamoDB","Azure SQL / Cosmos","Cloud SQL / Firestore"],
+    ["HSM (prod)","CloudHSM","Managed HSM","Cloud HSM"]
+  ],
+  "algos": [
+    {"name":"RSA","set":"2048 / 3072 / 4096","status":"live"},
+    {"name":"ECDSA","set":"P-256 / P-384 / P-521","status":"live"},
+    {"name":"Ed25519","set":"EdDSA","status":"live"},
+    {"name":"ML-DSA","set":"44 / 65 / 87 (FIPS 204)","status":"wired (-tags pqc)"}
+  ],
+  "trustPaths": [
+    ["CA chains","Root → Intermediate → Issuing"],
+    ["HSM operations","Simulated SoftHSM / PKCS#11"],
+    ["Venafi control plane","Mock REST API"],
+    ["OCSP / CRL","Revocation services"],
+    ["AD / GPO","EST auto-enroll + profiles"],
+    ["Load balancing + HA","≥2 replicas behind an LB"],
+    ["Cloud interfaces","Multi-cloud Terraform"],
+    ["Crypto agility","RSA/ECDSA/Ed25519 + PQC seam"],
+    ["IaC lifecycle","Spin up / tear down on demand"]
+  ]
+}
+</script>
+
+<script>
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+
+  // tabs
+  const tabs = document.getElementById('tabs');
+  tabs.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('section.tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.tab).classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  // hero badges
+  const r = DATA.report;
+  document.getElementById('heroBadges').innerHTML = [
+    `<span class="badge"><span class="dot ok"></span> <b>${r.certified?'CERTIFIED':'NOT CERTIFIED'}</b></span>`,
+    `<span class="badge">Checks <b>${r.passed}/${r.checks.length}</b> passed</span>`,
+    `<span class="badge">Harness runtime <b>${r.duration_ms} ms</b></span>`,
+    `<span class="badge">Algorithms <b>RSA · ECDSA · Ed25519 · ML-DSA</b></span>`,
+    `<span class="badge">Clouds <b>AWS · Azure · GCP</b></span>`
+  ].join('');
+
+  // KPIs
+  document.getElementById('kpis').innerHTML = [
+    {n:r.passed+'/'+r.checks.length, l:'Certification checks passed', c:'var(--ok)'},
+    {n:'3', l:'CA tiers (Root·Inter·Issuing)', c:'var(--accent)'},
+    {n:'9', l:'Services / components', c:'var(--accent2)'},
+    {n:'4', l:'Signature algorithm families', c:'var(--leaf)'}
+  ].map(k=>`<div class="card kpi"><div class="n" style="color:${k.c}">${k.n}</div><div class="l">${k.l}</div></div>`).join('');
+
+  // trust paths
+  document.getElementById('trustPaths').innerHTML = DATA.trustPaths.map(t=>
+    `<div class="card" style="padding:12px 14px;"><h3 style="font-size:13.5px;margin-bottom:4px;">${t[0]}</h3><p style="font-size:12.5px;">${t[1]}</p></div>`).join('');
+
+  // steps
+  document.getElementById('stepsList').innerHTML = DATA.steps.map(s=>`
+    <div class="step"><div class="node"></div>
+      <h4>Step ${s.n} — ${s.title}</h4>
+      <div class="meta"><span class="tag">Req ${s.req}</span><span class="mono">${s.files}</span></div>
+      <div class="body">${s.body}</div>
+    </div>`).join('');
+
+  // hierarchy tree
+  const tierClass = {root:'root',inter:'inter',issue:'issue'};
+  const treeEl = document.getElementById('tree');
+  let html = '';
+  DATA.hierarchy.forEach((c,i)=>{
+    const extra = c.aia ? `<div class="row"><span>AIA</span><b class="mono" style="font-size:10px">${c.aia}</b></div>
+                           <div class="row"><span>CDP</span><b class="mono" style="font-size:10px">${c.cdp}</b></div>` : '';
+    html += `<div class="tier"><div class="node-card ${tierClass[c.tier]}">
+        <div class="cn">${c.cn}</div>
+        <div class="row"><span>Key</span><b>${c.keyAlg}</b> <span class="pill">sig: ${c.sigAlg}</span></div>
+        <div class="row"><span>Expires</span><b>${c.notAfter}</b>
+          <span class="pill ${c.posture}">${c.posture}</span></div>
+        ${extra}
+      </div></div>`;
+    if(i < DATA.hierarchy.length-1) html += `<div class="connector"></div>`;
+  });
+  // add a leaf node
+  html += `<div class="connector"></div><div class="tier"><div class="node-card" style="border-left-color:var(--leaf)">
+      <div class="cn">End-entity leaf (e.g. tls-server)</div>
+      <div class="row"><span>Issued by</span><b>Issuing CA</b> <span class="pill online">90-day</span></div>
+      <div class="row"><span>Carries</span><b>AIA + CDP</b> <span class="pill">OCSP/CRL</span></div>
+    </div></div>`;
+  treeEl.innerHTML = html;
+
+  // components
+  document.getElementById('componentCards').innerHTML = DATA.components.map(c=>`
+    <div class="card" style="border-left:4px solid ${c.color};">
+      <h3 class="mono">${c.name}</h3>
+      <p style="color:var(--text);font-size:13px;margin-bottom:5px;">${c.role}</p>
+      <p>${c.detail}</p>
+    </div>`).join('');
+
+  // certify table
+  document.getElementById('verdictLine').innerHTML =
+    `${r.certified?'✅ CERTIFIED':'❌ NOT CERTIFIED'} — ${r.passed}/${r.checks.length} checks passed
+     <span style="color:var(--muted);font-weight:400;font-size:13px;">(${r.duration_ms} ms)</span>`;
+  document.getElementById('passBar').style.width = (r.pass_rate*100)+'%';
+  document.getElementById('checksBody').innerHTML = r.checks.map(c=>`
+    <tr>
+      <td>${c.name}</td>
+      <td><span class="reqchip">${c.requirement}</span></td>
+      <td style="color:var(--muted)">${c.detail||'—'}</td>
+      <td class="status ${c.pass?'pass':'fail'}">${c.pass?'PASS':'FAIL'}</td>
+    </tr>`).join('');
+
+  // cloud grid
+  const cg = DATA.cloud;
+  let cgHtml = '';
+  cg.forEach((row,ri)=>{
+    row.forEach((cell,ci)=>{
+      let cls = ri===0 ? 'hd' : '';
+      if(ri>0 && ci===1) cls='impl';
+      if(ri>0 && ci>1) cls='stub';
+      cgHtml += `<div class="${cls}">${cell}</div>`;
+    });
+  });
+  document.getElementById('cloudGrid').innerHTML = cgHtml;
+
+  // algos
+  document.getElementById('algoCards').innerHTML = DATA.algos.map(a=>{
+    const live = a.status==='live';
+    return `<div class="card kpi">
+      <div class="n" style="font-size:20px;color:${live?'var(--ok)':'var(--warn)'}">${a.name}</div>
+      <div class="l">${a.set}</div>
+      <div style="margin-top:8px;"><span class="pill ${live?'online':'offline'}">${a.status}</span></div>
+    </div>`;
+  }).join('');
+</script>
+</body>
+</html>

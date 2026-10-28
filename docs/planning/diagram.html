@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AWS Hybrid PKI Test Environment — Architecture</title>
+<style>
+  :root{--bg:#0b1020;--panel:#121a30;--line:#243454;--text:#e6edf7;--muted:#8aa0c2;
+        --aws:#ff9900;--net:#4da3ff;--sec:#30d158;--hsm:#7c5cff;--data:#ffb020;--onprem:#ff5c7a;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 70px;}
+  h1{font-size:25px;margin:0 0 6px;}
+  p.sub{color:var(--muted);margin:0 0 18px;max-width:820px;line-height:1.55;}
+  .tabs{display:flex;gap:8px;margin:14px 0 18px;flex-wrap:wrap;}
+  .tabs button{background:var(--panel);color:var(--muted);border:1px solid var(--line);
+    padding:9px 16px;border-radius:10px;cursor:pointer;font-size:14px;}
+  .tabs button.active{background:linear-gradient(135deg,var(--aws),#ffb84d);color:#201400;font-weight:700;border-color:transparent;}
+  .view{display:none;}.view.active{display:block;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 16px;color:var(--muted);font-size:12.5px;}
+  .legend span{display:inline-flex;align-items:center;gap:7px;}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block;}
+  .frame{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,.35);}
+  svg{width:100%;height:auto;display:block;}
+  .cap{color:var(--muted);font-size:12.5px;margin-top:10px;line-height:1.6;}
+  text{font-family:inherit;}
+  footer{margin-top:28px;color:var(--muted);font-size:12.5px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AWS Hybrid PKI Test &amp; Certification Environment — Architecture</h1>
+  <p class="sub">Cloud-first: the full production-representative PKI test environment is built in <b>AWS first</b>
+    (View 1). The <b>hybrid</b> on-prem/VA integration is a follow-on extension (View 2). For leadership review.</p>
+
+  <div class="tabs">
+    <button class="active" data-v="v1">View 1 — AWS all-in</button>
+    <button data-v="v2">View 2 — Hybrid extension</button>
+    <button data-v="v3">Trust chain &amp; flow</button>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--aws)"></i> AWS boundary</span>
+    <span><i class="sw" style="background:var(--net)"></i> Network / compute</span>
+    <span><i class="sw" style="background:var(--hsm)"></i> Key management</span>
+    <span><i class="sw" style="background:var(--data)"></i> Data / state</span>
+    <span><i class="sw" style="background:var(--sec)"></i> Security / observability</span>
+    <span><i class="sw" style="background:var(--onprem)"></i> On-prem / VA</span>
+  </div>
+
+  <!-- VIEW 1 -->
+  <div class="view active" id="v1">
+    <div class="frame">
+      <svg viewBox="0 0 1120 720" role="img" aria-label="AWS all-in architecture">
+        <defs>
+          <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#6f87ad"/>
+          </marker>
+          <style>
+            .box{fill:#0f1628;stroke:#2a3c60;rx:10;}
+            .lbl{fill:#e6edf7;font-size:13px;font-weight:600;}
+            .sub{fill:#8aa0c2;font-size:11px;}
+            .zone{fill:none;stroke-width:1.5;rx:14;}
+            .zt{font-size:12px;font-weight:700;}
+            .edge{stroke:#6f87ad;stroke-width:1.6;fill:none;marker-end:url(#arr);}
+            .edged{stroke:#55688c;stroke-width:1.3;fill:none;stroke-dasharray:4 4;}
+          </style>
+        </defs>
+
+        <!-- Testers -->
+        <rect class="box" x="20" y="40" width="150" height="60" rx="10"/>
+        <text class="lbl" x="34" y="66">Testers / CI-CD</text>
+        <text class="sub" x="34" y="84">engineers + harness</text>
+
+        <!-- AWS boundary -->
+        <rect class="zone" x="200" y="20" width="900" height="680" style="stroke:var(--aws)"/>
+        <text class="zt" x="214" y="40" style="fill:var(--aws)">AWS — dedicated PKI TEST account (multi-AZ)</text>
+
+        <!-- Edge -->
+        <rect class="zone" x="220" y="54" width="860" height="70" style="stroke:var(--net)"/>
+        <text class="zt" x="232" y="72" style="fill:var(--net)">Edge / DNS</text>
+        <rect class="box" x="232" y="78" width="150" height="38" rx="8"/>
+        <text class="lbl" x="244" y="102">Route 53 (private)</text>
+        <rect class="box" x="400" y="78" width="180" height="38" rx="8"/>
+        <text class="lbl" x="412" y="102">CloudFront (CRL/AIA)</text>
+
+        <!-- VPC -->
+        <rect class="zone" x="220" y="138" width="600" height="420" style="stroke:var(--net)"/>
+        <text class="zt" x="232" y="158" style="fill:var(--net)">VPC — ≥2 AZs (public / private / isolated)</text>
+
+        <rect class="box" x="300" y="172" width="300" height="42" rx="8"/>
+        <text class="lbl" x="314" y="198">Application Load Balancer (multi-AZ)</text>
+
+        <!-- ECS services -->
+        <rect class="zone" x="240" y="232" width="560" height="150" style="stroke:var(--net)"/>
+        <text class="zt" x="252" y="250" style="fill:var(--net)">ECS Fargate — ≥2 replicas/AZ, autoscaled</text>
+        <rect class="box" x="252" y="262" width="125" height="46"/><text class="lbl" x="262" y="283">Venafi-shaped</text><text class="sub" x="262" y="299">lifecycle API</text>
+        <rect class="box" x="388" y="262" width="125" height="46"/><text class="lbl" x="398" y="283">EST / SCEP</text><text class="sub" x="398" y="299">enrollment</text>
+        <rect class="box" x="524" y="262" width="125" height="46"/><text class="lbl" x="534" y="283">CA core</text><text class="sub" x="534" y="299">issuing signer</text>
+        <rect class="box" x="660" y="262" width="125" height="46"/><text class="lbl" x="670" y="283">OCSP</text><text class="sub" x="670" y="299">responder</text>
+
+        <!-- Data -->
+        <rect class="zone" x="240" y="398" width="560" height="140" style="stroke:var(--data)"/>
+        <text class="zt" x="252" y="416" style="fill:var(--data)">Data &amp; state (multi-AZ)</text>
+        <rect class="box" x="252" y="430" width="250" height="44"/><text class="lbl" x="262" y="451">Status store</text><text class="sub" x="262" y="467">RDS / DynamoDB</text>
+        <rect class="box" x="520" y="430" width="265" height="44"/><text class="lbl" x="530" y="451">S3 — CRL / AIA / artifacts</text>
+
+        <!-- Key mgmt -->
+        <rect class="zone" x="840" y="138" width="240" height="200" style="stroke:var(--hsm)"/>
+        <text class="zt" x="852" y="158" style="fill:var(--hsm)">Key management</text>
+        <rect class="box" x="852" y="170" width="216" height="46"/><text class="lbl" x="862" y="191">CloudHSM (multi-AZ)</text><text class="sub" x="862" y="207">PKCS#11</text>
+        <rect class="box" x="852" y="226" width="216" height="40"/><text class="lbl" x="862" y="251">KMS (envelope keys)</text>
+        <rect class="box" x="852" y="278" width="216" height="46"/><text class="lbl" x="862" y="299">Secrets Manager</text><text class="sub" x="862" y="315">PINs / config</text>
+
+        <!-- Security / obs -->
+        <rect class="zone" x="840" y="352" width="240" height="206" style="stroke:var(--sec)"/>
+        <text class="zt" x="852" y="372" style="fill:var(--sec)">Security &amp; observability</text>
+        <rect class="box" x="852" y="384" width="216" height="36"/><text class="lbl" x="862" y="407">CloudTrail (audit)</text>
+        <rect class="box" x="852" y="428" width="216" height="36"/><text class="lbl" x="862" y="451">CloudWatch (logs/alarms)</text>
+        <rect class="box" x="852" y="472" width="216" height="36"/><text class="lbl" x="862" y="495">AWS Config</text>
+        <rect class="box" x="852" y="516" width="216" height="36"/><text class="lbl" x="862" y="539">GuardDuty / Security Hub</text>
+
+        <!-- edges -->
+        <path class="edge" d="M170,70 L232,96"/>
+        <path class="edge" d="M307,116 L420,172"/>
+        <path class="edge" d="M450,214 L440,262"/>
+        <path class="edge" d="M586,308 L586,262" transform="translate(0,0)"/>
+        <path class="edge" d="M586,308 L586,398" transform="translate(0,0)"/>
+        <path class="edge" d="M649,285 L852,193"/>
+        <text class="sub" x="700" y="250">PKCS#11 sign</text>
+        <path class="edge" d="M722,285 L722,430"/>
+        <path class="edge" d="M785,452 L520,452" transform="translate(0,0)"/>
+        <path class="edge" d="M652,452 L580,116" />
+        <text class="sub" x="612" y="300">publish CRL/AIA → S3 → CloudFront</text>
+        <path class="edged" d="M700,308 L852,300"/>
+      </svg>
+    </div>
+    <p class="cap"><b>Root CA posture:</b> offline (dedicated CloudHSM partition), signs only Intermediates + Root CRL —
+      never attached to an online service. <b>Ephemeral by IaC:</b> entire stack is <code>terraform apply/destroy</code>;
+      scheduled teardown drives idle cost to ≈ $0.</p>
+  </div>
+
+  <!-- VIEW 2 -->
+  <div class="view" id="v2">
+    <div class="frame">
+      <svg viewBox="0 0 1120 440" role="img" aria-label="Hybrid extension">
+        <defs>
+          <marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#6f87ad"/></marker>
+          <style>
+            .b{fill:#0f1628;stroke:#2a3c60;} .l{fill:#e6edf7;font-size:13px;font-weight:600;}
+            .s{fill:#8aa0c2;font-size:11px;} .z{fill:none;stroke-width:1.6;rx:14;} .zl{font-size:12px;font-weight:700;}
+            .e{stroke:#6f87ad;stroke-width:1.8;fill:none;marker-end:url(#arr2);}
+          </style>
+        </defs>
+        <!-- On-prem -->
+        <rect class="z" x="20" y="40" width="320" height="360" style="stroke:var(--onprem)"/>
+        <text class="zl" x="34" y="62" style="fill:var(--onprem)">VA / On-prem data center</text>
+        <rect class="b" x="40" y="80" width="280" height="56" rx="10"/><text class="l" x="54" y="105">Active Directory + GPO</text><text class="s" x="54" y="123">machine/user auto-enroll</text>
+        <rect class="b" x="40" y="156" width="280" height="56" rx="10"/><text class="l" x="54" y="181">On-prem HSM (optional)</text><text class="s" x="54" y="199">trust-anchor bridge</text>
+        <rect class="b" x="40" y="232" width="280" height="56" rx="10"/><text class="l" x="54" y="257">Existing PKI consumers</text><text class="s" x="54" y="275">validation / issuance</text>
+
+        <!-- Link -->
+        <rect class="z" x="400" y="150" width="200" height="140" style="stroke:var(--net)"/>
+        <text class="zl" x="414" y="172" style="fill:var(--net)">Private link</text>
+        <rect class="b" x="414" y="188" width="172" height="80" rx="10"/><text class="l" x="428" y="222">Direct Connect</text><text class="s" x="428" y="242">/ Site-to-Site VPN</text>
+
+        <!-- AWS -->
+        <rect class="z" x="660" y="40" width="440" height="360" style="stroke:var(--aws)"/>
+        <text class="zl" x="674" y="62" style="fill:var(--aws)">AWS PKI TEST environment (View 1)</text>
+        <rect class="b" x="684" y="110" width="390" height="70" rx="10"/><text class="l" x="700" y="140">PKI services</text><text class="s" x="700" y="160">CA · OCSP · CRL · enrollment</text>
+        <rect class="b" x="684" y="220" width="390" height="70" rx="10"/><text class="l" x="700" y="250">CloudHSM</text><text class="s" x="700" y="270">PKCS#11 key operations</text>
+
+        <path class="e" d="M320,108 L414,210"/>
+        <path class="e" d="M320,260 L414,250"/>
+        <path class="e" d="M586,228 L684,160"/>
+        <path class="e" d="M586,240 L684,250"/>
+        <text class="s" x="350" y="150">LDAP / enroll over private, authenticated path</text>
+      </svg>
+    </div>
+    <p class="cap">In Phase A–D the AD/GPO interface is a stubbed enrollment surface inside AWS. In Phase F we connect the
+      real VA AD over Direct Connect/VPN and <b>certify the cross-environment path with the same harness</b> used for the AWS baseline.</p>
+  </div>
+
+  <!-- VIEW 3 -->
+  <div class="view" id="v3">
+    <div class="frame">
+      <svg viewBox="0 0 1120 300" role="img" aria-label="Trust chain">
+        <defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#6f87ad"/></marker>
+        <style>.b{fill:#0f1628;stroke:#2a3c60;}.l{fill:#e6edf7;font-size:13px;font-weight:600;}.s{fill:#8aa0c2;font-size:11px;}.e{stroke:#6f87ad;stroke-width:1.8;fill:none;marker-end:url(#arr3);}.ed{stroke:#55688c;stroke-width:1.3;fill:none;stroke-dasharray:4 4;marker-end:url(#arr3);}</style></defs>
+        <rect class="b" x="30" y="60" width="190" height="64" rx="12" style="stroke:#7c5cff"/><text class="l" x="44" y="88">Root CA</text><text class="s" x="44" y="106">offline · CloudHSM</text>
+        <rect class="b" x="280" y="60" width="190" height="64" rx="12" style="stroke:#4da3ff"/><text class="l" x="294" y="88">Intermediate CA</text><text class="s" x="294" y="106">CloudHSM</text>
+        <rect class="b" x="530" y="60" width="190" height="64" rx="12" style="stroke:#30d158"/><text class="l" x="544" y="88">Issuing CA</text><text class="s" x="544" y="106">online · CloudHSM</text>
+        <rect class="b" x="780" y="60" width="200" height="64" rx="12" style="stroke:#ffb020"/><text class="l" x="794" y="88">End-entity leaf</text><text class="s" x="794" y="106">TLS / client / device</text>
+        <path class="e" d="M220,92 L280,92"/><path class="e" d="M470,92 L530,92"/><path class="e" d="M720,92 L780,92"/>
+        <rect class="b" x="700" y="200" width="150" height="50" rx="10"/><text class="l" x="712" y="230">OCSP responder</text>
+        <rect class="b" x="880" y="200" width="200" height="50" rx="10"/><text class="l" x="892" y="230">CRL (S3+CloudFront)</text>
+        <path class="ed" d="M880,124 L800,200"/><path class="ed" d="M940,124 L960,200"/>
+        <text class="s" x="770" y="160">AIA / CDP</text>
+      </svg>
+    </div>
+    <p class="cap">Every issued leaf carries AIA (OCSP URL) and CDP (CRL URL) so revocation status is discoverable.
+      The certification harness verifies the chain builds to Root and that OCSP/CRL reflect revocation.</p>
+  </div>
+
+  <footer>Standalone diagram — no dependencies. Pair with <code>01-project-plan.md</code> and <code>03-aws-services.md</code>.</footer>
+</div>
+<script>
+  document.querySelector('.tabs').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); document.getElementById(b.dataset.v).classList.add('active');
+  });
+</script>
+</body>
+</html>
